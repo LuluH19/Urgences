@@ -1,307 +1,214 @@
-name: CI
+name: CI Client
 
 on:
   push:
-    branches:
-      - main
-      - dev
+    branches: [main, dev]
     paths:
-      - 'client/**'
-      - '.github/workflows/ci.yml'
+      - "client/**"
+      - ".github/workflows/ci.yml"
   pull_request:
-    branches:
-      - main
-      - dev
+    branches: [main, dev]
     paths:
-      - 'client/**'
+      - "client/**"
 
-env: {}
+permissions:
+  contents: read
+  pull-requests: write
 
 concurrency:
-  group: ci-client-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  group: ci-client-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  NODE_VERSION: 24
+  CLIENT_DIR: client
+
+defaults:
+  run:
+    shell: bash
+
 jobs:
-  # ========================================
-  # Quality: Commit Linting (Conventional Commits)
-  # ========================================
+  # -----------------------------------------------
+  # Commit lint (PR only)
+  # -----------------------------------------------
   lint-commits:
-    name: Lint Commits
+    if: github.event_name == 'pull_request'
+    name: Commit Lint
     runs-on: ubuntu-latest
     timeout-minutes: 5
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
-          node-version: '24'
+          node-version: ${{ env.NODE_VERSION }}
 
-      - name: Install commitlint
-        run: |
-          npm install --save-dev @commitlint/cli @commitlint/config-conventional
+      - run: npm install --no-save @commitlint/cli @commitlint/config-conventional
 
-      - name: Validate commits with commitlint
-        uses: wagoid/commitlint-github-action@v6
+      - uses: wagoid/commitlint-github-action@v6
         with:
-          configFile: '.commitlintrc.json'
+          configFile: .commitlintrc.json
 
-  # ========================================
-  # Quality: Linting
-  # ========================================
+  # -----------------------------------------------
+  # Lint
+  # -----------------------------------------------
   lint:
-    name: Lint Code
+    name: ESLint
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
-          node-version: '24'
-          cache: 'npm'
-          cache-dependency-path: 'client/package-lock.json'
-
-      - name: Install dependencies
-        working-directory: ./client
-        run: npm ci
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: client/package-lock.json
+      - run: npm ci
+        working-directory: client
 
       - name: Run ESLint
-        working-directory: ./client
         run: npm run lint
+        working-directory: client
 
-      - name: Comment PR with lint result
-        if: github.event_name == 'pull_request' && success()
-        uses: actions/github-script@v7
-        with:
-          script: |
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: 'Linting client réussi'
-            });
-
-  # ========================================
-  # Quality: TypeScript Type Check
-  # ========================================
+  # -----------------------------------------------
+  # TypeScript
+  # -----------------------------------------------
   typecheck:
-    name: TypeScript Type Check
+    name: TypeScript Check
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
-          node-version: '24'
-          cache: 'npm'
-          cache-dependency-path: 'client/package-lock.json'
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: client/package-lock.json
+      - run: npm ci
+        working-directory: client
 
-      - name: Install dependencies
-        working-directory: ./client
-        run: npm ci
-
-      - name: Run TypeScript type checker
-        working-directory: ./client
+      - name: Run typecheck
         run: npm run typecheck
+        working-directory: client
 
-      - name: Comment PR with typecheck result
-        if: github.event_name == 'pull_request' && success()
-        uses: actions/github-script@v7
-        with:
-          script: |
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: ' Vérification des types réussie'
-            });
-
-  # ========================================
-  # Security: NPM Audit
-  # ========================================
-  security-scan-npm:
-    name: NPM Security Audit
+  # -----------------------------------------------
+  # Security audit
+  # -----------------------------------------------
+  security:
+    name: NPM Audit
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
-          node-version: '24'
-          cache: 'npm'
-          cache-dependency-path: 'client/package-lock.json'
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: client/package-lock.json
+      - run: npm ci
+        working-directory: client
 
-      - name: Install dependencies
-        working-directory: ./client
-        run: npm ci
-
-      - name: Run npm audit
-        working-directory: ./client
+      - name: Run npm audit (critical/high only)
+        working-directory: client
         run: |
-          echo "🔍 Scanning for vulnerabilities..."
-          npm audit --audit-level=high --json > audit-report.json 2>&1 || true
-          
-          node -e "
-            try {
-              const report = require('./audit-report.json');
-              const vulnerabilities = report.metadata.vulnerabilities;
-              
-              console.log(' Rapport npm audit:');
-              console.log('  Total: ' + (vulnerabilities.total || 0));
-              console.log('  Critical: ' + (vulnerabilities.critical || 0));
-              console.log('  High: ' + (vulnerabilities.high || 0));
-              console.log('  Medium: ' + (vulnerabilities.moderate || 0));
-              console.log('  Low: ' + (vulnerabilities.low || 0));
-              
-              // Vérifier si les vulnérabilités HIGH sont uniquement dans les devDependencies
-              const fs = require('fs');
-              const pkg = JSON.parse(fs.readFileSync('./package.json', 'utf8'));
-              const prodDeps = new Set(Object.keys(pkg.dependencies || {}));
-              let highInProduction = false;
-              
-              if (vulnerabilities.high > 0 && report.vulnerabilities) {
-                for (const [pkgName, vuln] of Object.entries(report.vulnerabilities)) {
-                  if (vuln.severity === 'high' && vuln.isDirect) {
-                    // Vérifier si c'est une dépendance directe de production
-                    if (prodDeps.has(pkgName)) {
-                      highInProduction = true;
-                      break;
-                    }
-                  }
-                }
-              }
-              
-              if (vulnerabilities.critical > 0) {
-                console.log('');
-                console.log('❌ Vulnérabilités CRITICAL détectées - Blocage du pipeline');
-                process.exit(1);
-              } else if (vulnerabilities.high > 0 && highInProduction) {
-                console.log('');
-                console.log('⚠️  Vulnérabilités HIGH détectées dans les dépendances de production');
-                console.log('❌ Blocage du pipeline');
-                process.exit(1);
-              } else if (vulnerabilities.high > 0) {
-                console.log('');
-                console.log('⚠️  Vulnérabilités HIGH détectées dans les devDependencies uniquement');
-                console.log('ℹ️  Ces vulnérabilités n\'affectent pas la production');
-                console.log('✅ Pipeline autorisé à continuer');
-              } else {
-                console.log('');
-                console.log('✅ Pas de vulnérabilités CRITICAL ou HIGH');
-              }
-            } catch (e) {
-              console.log('  Impossible de parser le rapport npm audit');
-              console.log('  Erreur: ' + e.message);
-              process.exit(1);
-            }
-          "
+          npm audit --audit-level=high --json > audit.json || true
 
-      - name: Upload audit report
-        uses: actions/upload-artifact@v4
+          node <<'EOF'
+          const report = require('./audit.json');
+          const v = report.metadata?.vulnerabilities || {};
+          console.log(v);
+
+          if (v.critical > 0) {
+            console.error("❌ Critical vulnerabilities detected");
+            process.exit(1);
+          }
+
+          if (v.high > 0) {
+            console.error("❌ High vulnerabilities detected");
+            process.exit(1);
+          }
+
+          console.log("✅ No critical/high vulnerabilities");
+          EOF
+
+      - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: npm-audit-client
-          path: client/audit-report.json
-          retention-days: 30
+          path: client/audit.json
+          retention-days: 14
 
-  # ========================================
-  # Build: Vite Build
-  # ========================================
+  # -----------------------------------------------
+  # Build
+  # -----------------------------------------------
   build:
-    name: Build Application
-    needs: [lint, typecheck, security-scan-npm]
+    name: Build (Vite)
     runs-on: ubuntu-latest
+    needs: [lint, typecheck, security]
     timeout-minutes: 15
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
-          node-version: '24'
-          cache: 'npm'
-          cache-dependency-path: 'client/package-lock.json'
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: client/package-lock.json
+      - run: npm ci
+        working-directory: client
 
-      - name: Install dependencies
-        working-directory: ./client
-        run: npm ci
-
-      - name: Build application
-        working-directory: ./client
+      - name: Build app
         run: npm run build
+        working-directory: client
 
-      - name: Upload build artifact
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
-          name: build-artifacts-client
-          path: client/dist/
+          name: client-build
+          path: client/dist
           retention-days: 30
 
-      - name: Comment PR with build result
-        if: github.event_name == 'pull_request' && success()
-        uses: actions/github-script@v7
-        with:
-          script: |
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: ' Build client réussi'
-            });
-
-  # ========================================
-  # Status Check
-  # ========================================
-  ci-status:
-    name: CI Client Status
+  # -----------------------------------------------
+  # PR summary comment (single comment)
+  # -----------------------------------------------
+  pr-summary:
+    name: PR Summary
+    if: github.event_name == 'pull_request'
+    needs: [lint-commits, lint, typecheck, security, build]
     runs-on: ubuntu-latest
-    needs: [lint-commits, lint, typecheck, security-scan-npm, build]
-    if: always()
 
     steps:
-      - name: Check CI status
-        run: |
-          FAILED=0
-          if [ "${{ needs.lint-commits.result }}" != "success" ] && [ "${{ needs.lint-commits.result }}" != "skipped" ]; then
-            echo "❌ Lint commits échoué"
-            FAILED=1
-          fi
-          if [ "${{ needs.lint.result }}" != "success" ]; then
-            echo "❌ Lint code échoué"
-            FAILED=1
-          fi
-          if [ "${{ needs.typecheck.result }}" != "success" ]; then
-            echo "❌ Typecheck échoué"
-            FAILED=1
-          fi
-          if [ "${{ needs.security-scan-npm.result }}" != "success" ]; then
-            echo "❌ Security scan échoué"
-            FAILED=1
-          fi
-          if [ "${{ needs.build.result }}" != "success" ]; then
-            echo "❌ Build échoué"
-            FAILED=1
-          fi
-          if [ $FAILED -eq 1 ]; then
-            echo "❌ Pipeline CI Client échouée"
-            exit 1
-          fi
-          echo "✅ Pipeline CI Client réussie"
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const results = {
+              commits: "${{ needs.lint-commits.result }}",
+              lint: "${{ needs.lint.result }}",
+              typecheck: "${{ needs.typecheck.result }}",
+              security: "${{ needs.security.result }}",
+              build: "${{ needs.build.result }}"
+            };
+
+            const icon = r => r === "success" ? "✅" : "❌";
+
+            const body = `
+            ## CI Client Results
+
+            - Commit lint: ${icon(results.commits)}
+            - ESLint: ${icon(results.lint)}
+            - TypeScript: ${icon(results.typecheck)}
+            - Security audit: ${icon(results.security)}
+            - Build: ${icon(results.build)}
+            `;
+
+            github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body
+            });
