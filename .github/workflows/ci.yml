@@ -1,0 +1,214 @@
+name: CI Client
+
+on:
+  push:
+    branches: [main, dev]
+    paths:
+      - "client/**"
+      - ".github/workflows/ci.yml"
+  pull_request:
+    branches: [main, dev]
+    paths:
+      - "client/**"
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: ci-client-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: 24
+  CLIENT_DIR: client
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  # -----------------------------------------------
+  # Commit lint (PR only)
+  # -----------------------------------------------
+  lint-commits:
+    if: github.event_name == 'pull_request'
+    name: Commit Lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - run: npm install --no-save @commitlint/cli @commitlint/config-conventional
+
+      - uses: wagoid/commitlint-github-action@v6
+        with:
+          configFile: .commitlintrc.json
+
+  # -----------------------------------------------
+  # Lint
+  # -----------------------------------------------
+  lint:
+    name: ESLint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: client/package-lock.json
+      - run: npm ci
+        working-directory: client
+
+      - name: Run ESLint
+        run: npm run lint
+        working-directory: client
+
+  # -----------------------------------------------
+  # TypeScript
+  # -----------------------------------------------
+  typecheck:
+    name: TypeScript Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: client/package-lock.json
+      - run: npm ci
+        working-directory: client
+
+      - name: Run typecheck
+        run: npm run typecheck
+        working-directory: client
+
+  # -----------------------------------------------
+  # Security audit
+  # -----------------------------------------------
+  security:
+    name: NPM Audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: client/package-lock.json
+      - run: npm ci
+        working-directory: client
+
+      - name: Run npm audit (critical/high only)
+        working-directory: client
+        run: |
+          npm audit --audit-level=high --json > audit.json || true
+
+          node <<'EOF'
+          const report = require('./audit.json');
+          const v = report.metadata?.vulnerabilities || {};
+          console.log(v);
+
+          if (v.critical > 0) {
+            console.error("❌ Critical vulnerabilities detected");
+            process.exit(1);
+          }
+
+          if (v.high > 0) {
+            console.error("❌ High vulnerabilities detected");
+            process.exit(1);
+          }
+
+          console.log("✅ No critical/high vulnerabilities");
+          EOF
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: npm-audit-client
+          path: client/audit.json
+          retention-days: 14
+
+  # -----------------------------------------------
+  # Build
+  # -----------------------------------------------
+  build:
+    name: Build (Vite)
+    runs-on: ubuntu-latest
+    needs: [lint, typecheck, security]
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: client/package-lock.json
+      - run: npm ci
+        working-directory: client
+
+      - name: Build app
+        run: npm run build
+        working-directory: client
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: client-build
+          path: client/dist
+          retention-days: 30
+
+  # -----------------------------------------------
+  # PR summary comment (single comment)
+  # -----------------------------------------------
+  pr-summary:
+    name: PR Summary
+    if: github.event_name == 'pull_request'
+    needs: [lint-commits, lint, typecheck, security, build]
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const results = {
+              commits: "${{ needs.lint-commits.result }}",
+              lint: "${{ needs.lint.result }}",
+              typecheck: "${{ needs.typecheck.result }}",
+              security: "${{ needs.security.result }}",
+              build: "${{ needs.build.result }}"
+            };
+
+            const icon = r => r === "success" ? "✅" : "❌";
+
+            const body = `
+            ## CI Client Results
+
+            - Commit lint: ${icon(results.commits)}
+            - ESLint: ${icon(results.lint)}
+            - TypeScript: ${icon(results.typecheck)}
+            - Security audit: ${icon(results.security)}
+            - Build: ${icon(results.build)}
+            `;
+
+            github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body
+            });
