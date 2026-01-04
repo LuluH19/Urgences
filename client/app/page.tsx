@@ -51,7 +51,7 @@ export default function Home() {
         </div>
         <Link 
           href="/hopitaux"
-          className="bg-primary text-white px-4 py-2 rounded-2xl font-bold w-fit hover:opacity-90 transition-opacity" 
+          className="bg-primary text-white px-4 py-2 rounded-2xl font-bold w-fit hover:opacity-90 transition-opacity focus:outline-none focus:ring-4 focus:ring-red-600" 
           aria-label="Accéder à la liste complète des hôpitaux disponibles"
         >
           Accéder à la liste des hôpitaux
@@ -61,7 +61,7 @@ export default function Home() {
         <h2 id="map-heading" className='text-lg md:text-xl lg:text-2xl font-bold text-left w-full'>Passer par la carte</h2>
         <div></div>
         <button 
-          className='bg-primary text-white px-4 py-2 rounded-2xl font-bold w-fit' 
+          className='bg-primary text-white px-4 py-2 rounded-2xl font-bold w-fit focus:outline-none focus:ring-4 focus:ring-red-600' 
           type="button"
           aria-label="Accéder à la carte interactive des hôpitaux"
         >

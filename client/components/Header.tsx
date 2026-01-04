@@ -21,7 +21,7 @@ export default function Header() {
                   href="/"
                   onMouseEnter={() => setHoveredLink('/')}
                   onMouseLeave={() => setHoveredLink(null)}
-                  className={`flex flex-row items-center justify-center md:justify-start gap-2 md:gap-4 px-4 py-3 transition-all duration-200 w-fit md:w-auto md:mx-4 ${
+                  className={`flex flex-row items-center justify-center md:justify-start gap-2 md:gap-4 px-4 py-3 transition-all duration-200 w-fit md:w-auto md:mx-4 focus:outline-none focus:ring-4 focus:ring-red-600 ${
                     isActive('/') || isHovered('/') 
                       ? 'bg-black rounded-[35px]' 
                       : ''
@@ -46,7 +46,7 @@ export default function Header() {
                   href="/services"
                   onMouseEnter={() => setHoveredLink('/services')}
                   onMouseLeave={() => setHoveredLink(null)}
-                  className={`flex flex-row items-center justify-center md:justify-start gap-2 md:gap-4 px-4 py-3 transition-all duration-200 w-fit md:w-auto md:mx-4 ${
+                  className={`flex flex-row items-center justify-center md:justify-start gap-2 md:gap-4 px-4 py-3 transition-all duration-200 w-fit md:w-auto md:mx-4 focus:outline-none focus:ring-4 focus:ring-red-600 ${
                     isActive('/services') || isHovered('/services')
                       ? 'bg-black rounded-[35px]' 
                       : ''
@@ -71,7 +71,7 @@ export default function Header() {
                   href="/hopitaux"
                   onMouseEnter={() => setHoveredLink('/hopitaux')}
                   onMouseLeave={() => setHoveredLink(null)}
-                  className={`flex flex-row items-center justify-center md:justify-start gap-2 md:gap-4 px-4 py-3 transition-all duration-200 w-fit md:w-auto md:mx-4 ${
+                  className={`flex flex-row items-center justify-center md:justify-start gap-2 md:gap-4 px-4 py-3 transition-all duration-200 w-fit md:w-auto md:mx-4 focus:outline-none focus:ring-4 focus:ring-red-600 ${
                     isActive('/hopitaux') || isHovered('/hopitaux')
                       ? 'bg-black rounded-[35px]' 
                       : ''
