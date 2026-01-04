@@ -1,10 +1,14 @@
 import Image from 'next/image'
-import FAQItem from './components/FAQItems'
+import Link from 'next/link'
+import FAQItem from '@/components/FAQItems'
+import Header from '@/components/Header'
 
 export default function Home() {
   return (
-    <main className="bg-white">
-      <section className="relative min-h-[130px] md:min-h-[250px] lg:min-h-[500px] shadow-[0_4px_4px_rgba(0,0,0,0.25)]" aria-label="En-tête de la page">
+    <>
+      <Header />
+      <main className="bg-white">
+      <section className="relative shadow-[0_4px_4px_rgba(0,0,0,0.25)]" aria-label="En-tête de la page">
         <div className="absolute top-0 left-0 w-full h-full">
           <Image 
             src="/images/home/hero-banner.webp" 
@@ -45,13 +49,13 @@ export default function Home() {
             Le site met également en avant les spécificités propres à chaque hôpital, comme les modalités de prise en charge, l&apos;accessibilité pour les personnes à mobilité réduite ou encore les accès réservés aux services de secours. En centralisant ces données fiables et actualisées, Services & Accès devient un outil simple et indispensable pour rendre le parcours de soins plus fluide et mieux informé.
           </p>
         </div>
-        <button 
-          className="bg-primary text-white px-4 py-2 rounded-2xl font-bold w-fit" 
-          type="button"
+        <Link 
+          href="/hopitaux"
+          className="bg-primary text-white px-4 py-2 rounded-2xl font-bold w-fit hover:opacity-90 transition-opacity" 
           aria-label="Accéder à la liste complète des hôpitaux disponibles"
         >
           Accéder à la liste des hôpitaux
-        </button>
+        </Link>
       </section>
       <section className='pt-6 px-4 flex flex-col gap-4 items-center' aria-labelledby="map-heading">
         <h2 id="map-heading" className='text-lg md:text-xl lg:text-2xl font-bold text-left w-full'>Passer par la carte</h2>
@@ -89,5 +93,6 @@ export default function Home() {
         </div>
       </section>
     </main>
+    </>
   )
 }
