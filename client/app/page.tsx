@@ -69,7 +69,7 @@ export default function Home() {
         </button>
       </section>
       <section className="pt-6 px-4 flex flex-col gap-4 items-center" aria-labelledby="faq-heading">
-        <h2 id="faq-heading" className="text-lg md:text-xl lg:text-2xl font-bold text-left w-full uppercase">Foire aux questions</h2>
+        <h2 id="faq-heading" className="text-lg md:text-xl lg:text-2xl font-bold text-left w-full uppercase">F.A.Q</h2>
         <div className="space-y-4 w-full">
           <FAQItem 
             question="Comment trouver un hôpital sur Services & Accès ?"
