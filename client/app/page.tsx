@@ -2,6 +2,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import FAQItem from '@/components/FAQItems'
 import Header from '@/components/Header'
+import MapWrapper from '@/components/MapWrapper'
 
 export default function Home() {
   return (
@@ -60,6 +61,7 @@ export default function Home() {
       <section className='pt-6 px-4 flex flex-col gap-4 items-center' aria-labelledby="map-heading">
         <h2 id="map-heading" className='text-lg md:text-xl lg:text-2xl font-bold text-left w-full'>Passer par la carte</h2>
         <div></div>
+        <MapWrapper />
         <button 
           className='bg-primary text-white px-4 py-2 rounded-2xl font-bold w-fit focus:outline-none focus:ring-4 focus:ring-red-600' 
           type="button"
