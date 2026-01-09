@@ -162,7 +162,7 @@ export default function HopitauxPage() {
       <Header />
       <main className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100 to-slate-50">
         <div className="px-4 py-6 sm:px-6 max-w-2xl mx-auto pb-8">
-          <h1 className="text-2xl md:text-3xl font-bold text-primary mb-6 text-center">
+          <h1 className="sr-only">
             Hôpitaux avec services d&apos;urgence
           </h1>
           {loading && <LoadingSpinner />}
