@@ -3,6 +3,7 @@
 import { useState, useEffect, FC, memo } from 'react';
 import Header from '@/components/Header';
 import Image from 'next/image';
+import Link from 'next/link';
 
 export const dynamic = 'force-dynamic';
 
@@ -69,9 +70,14 @@ const HospitalCard: FC<{ hospital: Hospital }> = memo(({ hospital }) => {
       aria-label={`Hôpital ${hospital.fields.name}`}
     >
       <div className="flex items-start justify-between gap-3 mb-3">
-        <h3 className="font-bold text-white flex-1 text-lg">
+        <p className="font-bold text-white flex-1 text-lg">
+        <Link 
+        href={`/hopitaux/${hospital.recordid}`}
+        aria-label={`Voir les détails de ${hospital.fields.name}`}
+      >
           {hospital.fields.name}
-        </h3>
+        </Link>
+        </p>
         {distance && (
           <span className="flex-shrink-0 font-bold py-2 px-4 rounded-full text-black bg-white text-sm" aria-label={`Distance: ${distance} kilomètres`}>
             {distance} km
@@ -82,8 +88,9 @@ const HospitalCard: FC<{ hospital: Hospital }> = memo(({ hospital }) => {
       {hospital.fields.phone && (
         <a 
           href={`tel:${hospital.fields.phone}`} 
-          className="flex items-center gap-2 w-fit focus:outline-none focus:ring-4 focus:ring-red-600 rounded px-2 py-1 -ml-2 hover:bg-black/10 transition-colors"
+          className="flex items-center gap-2 w-fit mt-3 focus:outline-none focus:ring-4 focus:ring-red-600 rounded px-2 py-1 -ml-2 hover:bg-black/10 transition-colors"
           aria-label={`Appeler ${hospital.fields.name} au ${hospital.fields.phone}`}
+          onClick={(e) => e.stopPropagation()}
         >
           <Image 
             src="/images/icons/phone-white.svg" 
