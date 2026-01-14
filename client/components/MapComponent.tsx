@@ -78,7 +78,7 @@ function MapContent() {
     const container = mapRef.current
 
     const initMap = async () => {
-      if (mapInstanceRef.current) return
+      if (mapInstanceRef.current) return undefined
 
       const L = (await import('leaflet')).default
 
@@ -108,13 +108,36 @@ function MapContent() {
 
       ;(container as any)._leaflet_id = null
 
-      const map = L.map(container).setView([48.8566, 2.3522], 12)
+      const map = L.map(container, {
+        keyboard: false
+      }).setView([48.8566, 2.3522], 12)
 
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; OpenStreetMap contributors',
       }).addTo(map)
 
       mapInstanceRef.current = map
+      
+      const disableMapFocus = () => {
+        const mapContainer = container.querySelector('.leaflet-container') as HTMLElement
+        if (mapContainer) {
+          mapContainer.setAttribute('tabindex', '-1')
+        }
+        
+        const controlLinks = container.querySelectorAll('.leaflet-control a')
+        controlLinks.forEach((link) => {
+          (link as HTMLElement).setAttribute('tabindex', '-1')
+        })
+      }
+      
+      setTimeout(disableMapFocus, 100)
+      setTimeout(disableMapFocus, 500)
+      
+      const observer = new MutationObserver(disableMapFocus)
+      observer.observe(container, {
+        childList: true,
+        subtree: true
+      })
 
       // Load and display hospitals on the map
       const loadHospitals = async (latitude: number, longitude: number) => {
@@ -135,9 +158,21 @@ function MapContent() {
             }
 
             const [lat, lng] = coords
-            const marker = L.marker([lat, lng], { icon: redIcon })
+            
+            const marker = L.marker([lat, lng], { 
+              icon: redIcon,
+              keyboard: false
+            })
               .addTo(map)
               .bindPopup(`<b>${hospital.fields.name}</b>`)
+              .on('popupopen', () => {
+                setTimeout(() => {
+                  const closeButton = container.querySelector('.leaflet-popup-close-button') as HTMLElement
+                  if (closeButton) {
+                    closeButton.setAttribute('tabindex', '-1')
+                  }
+                }, 10)
+              })
             
             markersRef.current.push(marker)
             markersAdded++
@@ -182,9 +217,16 @@ function MapContent() {
         // Fallback to Paris if geolocation not supported
         await loadHospitals(48.8566, 2.3522)
       }
+      
+      // Retourner la fonction de nettoyage de l'observer
+      return observer
     }
 
-    initMap()
+    let observer: MutationObserver | undefined
+    
+    initMap().then((obs) => {
+      observer = obs
+    })
 
     return () => {
       markersRef.current.forEach(marker => marker.remove())
@@ -193,6 +235,7 @@ function MapContent() {
         mapInstanceRef.current.remove()
         mapInstanceRef.current = null
       }
+      if (observer) observer.disconnect()
     }
   }, [])
 
@@ -207,7 +250,7 @@ function MapContent() {
       <div
         ref={mapRef}
         className="w-full h-[300px] md:h-[400px] lg:h-[500px] rounded-lg border-2 border-gray-300 shadow-md"
-        aria-label="Carte interactive des hôpitaux"
+        aria-hidden="true"
       />
     </>
   )
