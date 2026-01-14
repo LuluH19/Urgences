@@ -19,6 +19,7 @@ export default function Header() {
             <li className="w-full flex md:block items-center justify-center">
                 <Link 
                   href="/"
+                  aria-label="Accéder à la page d'accueil"
                   onMouseEnter={() => setHoveredLink('/')}
                   onMouseLeave={() => setHoveredLink(null)}
                   className={`flex flex-row items-center justify-center md:justify-start gap-2 md:gap-4 px-4 py-3 transition-all duration-200 w-fit md:w-auto md:mx-4 focus:outline-none focus:ring-4 focus:ring-red-600 ${
@@ -44,6 +45,7 @@ export default function Header() {
             <li className="w-full flex md:block items-center justify-center">
                 <Link 
                   href="/map"
+                  aria-label="Accéder à la carte"
                   onMouseEnter={() => setHoveredLink('/map')}
                   onMouseLeave={() => setHoveredLink(null)}
                   className={`flex flex-row items-center justify-center md:justify-start gap-2 md:gap-4 px-4 py-3 transition-all duration-200 w-fit md:w-auto md:mx-4 focus:outline-none focus:ring-4 focus:ring-red-600 ${
@@ -69,6 +71,7 @@ export default function Header() {
             <li className="w-full flex md:block items-center justify-center">
                 <Link 
                   href="/hopitaux"
+                  aria-label="Accéder à la liste des hôpitaux"
                   onMouseEnter={() => setHoveredLink('/hopitaux')}
                   onMouseLeave={() => setHoveredLink(null)}
                   className={`flex flex-row items-center justify-center md:justify-start gap-2 md:gap-4 px-4 py-3 transition-all duration-200 w-fit md:w-auto md:mx-4 focus:outline-none focus:ring-4 focus:ring-red-600 ${
